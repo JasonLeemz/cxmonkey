@@ -3,7 +3,7 @@
  */
 var express = require('express');
 var router = express.Router();
-let crypto = require('crypto');
+let check = require('../tools/check');
 
 function sha1(str) {
     var md5sum = crypto.createHash('sha1');
@@ -14,21 +14,33 @@ function sha1(str) {
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
+    // console.log(req.host)
+    // console.log(req.query)
     let signature = req.query.signature;
     let timestamp = req.query.timestamp;
     let nonce = req.query.nonce;
-    let token = 'cxmonkey2015_limingze';
     let echostr = req.query.echostr;
 
-    let tmpArr = [token, timestamp, nonce];
-    tmpArr.sort();
+    let checkRes = check.weixin(signature,timestamp,nonce);
 
-    let tmpStr = tmpArr.join('');
-    // console.log(tmpStr);
-    tmpStr = sha1(tmpStr);
-    // console.log(tmpStr);
+    if(checkRes){
+        res.send(echostr);
+    }else{
+        res.send('error');
+    }
+});
 
-    if( tmpStr == signature ){
+router.post('/', function(req, res, next) {
+    // console.log(req.host)
+    // console.log(req.query)
+    let signature = req.query.signature;
+    let timestamp = req.query.timestamp;
+    let nonce = req.query.nonce;
+    let echostr = req.query.echostr;
+
+    let checkRes = check.weixin(signature,timestamp,nonce);
+
+    if(checkRes){
         res.send(echostr);
     }else{
         res.send('error');

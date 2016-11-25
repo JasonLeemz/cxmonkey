@@ -7,8 +7,7 @@ let express = require('express'),
     actoken = require('../tools/token'),
     wxml = require('../tools/wxml'),
 
-    util = require('util'),
-    http = require('http');
+    util = require('util')
 
 
 /* GET home page. */
@@ -33,7 +32,7 @@ router.post('/', function (req, res, next) {
                             'fromusername': req.body.xml.tousername[0],
                             'cont': '感谢关注，欢迎调戏！\n博客地址：http://www.cnblogs.com/JasonLeemz/',
                         });
-                        util.log(msg);
+                        // util.log(msg);
                         res.send(msg);
                     });
 
@@ -47,26 +46,41 @@ router.post('/', function (req, res, next) {
                 'fromusername': req.body.xml.tousername[0],
                 'content': req.body.xml.content[0],
                 'msgid': req.body.xml.msgid[0],
-            }).then((result)=>{
+            }).then((result)=> {
+                console.log(result);
+                res.send(result);
+            });
+
+            break;
+        case 'image':
+            wxml.image({
+                'tousername': req.body.xml.fromusername[0],
+                'fromusername': req.body.xml.tousername[0],
+                'picurl': req.body.xml.picurl[0],
+                'msgid': req.body.xml.msgid[0],
+                'mediaid': req.body.xml.mediaid[0],
+            }).then((result)=> {
+                console.log(result);
+                res.send(result);
+            });
+
+            break;
+        case 'location':
+            wxml.location({
+                'tousername': req.body.xml.fromusername[0],
+                'fromusername': req.body.xml.tousername[0],
+                'location_x': req.body.xml.location_x[0],
+                'location_y': req.body.xml.location_y[0],
+                'scale': req.body.xml.scale[0],
+                'label': req.body.xml.label[0],
+                'msgid': req.body.xml.msgid[0],
+            }).then((result)=> {
                 console.log(result);
                 res.send(result);
             });
 
             break;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     // console.log("originalUrl:\n" + req.originalUrl);

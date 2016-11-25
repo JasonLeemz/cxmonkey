@@ -1,15 +1,16 @@
 /**
  * Created by jason on 2016/11/16.
  */
-let https = require('https');
-let util = require('util');
+let https = require('https'),
+    util = require('util'),
 // require('Promise');
 // let request = require('request');
 // let querystring = require('querystring');
-let rdsClient = require('../tools/mredis');
+    rdsClient = require('../tools/mredis'),
+    wxcode = require('./wxcode')
 
 let token = {
-    getContent:function(url) {
+    getContent: function (url) {
         // return new pending promise
         return new Promise((resolve, reject) => {
             // select http or https module, depending on reqested url
@@ -35,7 +36,7 @@ let token = {
         const appid = "wx06b9fd14ac0e7660";
         const secret = "b1059e82f499505648ebcd9f875461a9";
         const actHost = "api.weixin.qq.com";
-        const actPath = "/cgi-bin/token?grant_type=client_credential&appid="+appid+"&secret="+secret;
+        const actPath = "/cgi-bin/token?grant_type=client_credential&appid=" + appid + "&secret=" + secret;
 
         // var contents = querystring.stringify({
         //     name: 'joey',
@@ -60,38 +61,42 @@ let token = {
         //     })
         //     .catch((err) => console.error(err));
         //
-        return new Promise(function(resolve, rej) {
-            rdsClient.select(1,(error)=>{
-                if(error){
+        return new Promise(function (resolve, rej) {
+            rdsClient.select(1, (error)=> {
+                if (error) {
                     util.log('rdsClient ERROR: ' + error);
-                }else{
-                    rdsClient.get('wxact', function(error, res){
-                        if(error) {
-                            console.log('wxact',error);
+                } else {
+                    rdsClient.get('wxact', function (error, res) {
+                        if (error) {
+                            console.log('wxact', error);
                         } else {
-                            if(res){ // 从redis中取
+                            if (res) { // 从redis中取
                                 resolve(res);
-                            }else{ // 从weixin接口取
-                                var req = https.request(options, function(res){
+                            } else { // 从weixin接口取
+                                var req = https.request(options, function (res) {
                                     res.setEncoding('utf8');
-                                    res.on('data', function(chunk){
+                                    res.on('data', function (chunk) {
                                         let resObj = JSON.parse(chunk.toString("utf-8"));
-                                        resolve(resObj["access_token"]);
-
-                                        //写入redis
-                                        // Set a value
-                                        rdsClient.set('wxact', resObj["access_token"], rdsClient.print);
-                                        // Expire in 3 seconds
-                                        rdsClient.expire('wxact', resObj["expires_in"]);
+                                        if(resObj["errcode"] != 0){
+                                            console.log(wxcode[resObj["errcode"]]);
+                                            resolve(wxcode[resObj["errcode"]]);
+                                        }else{
+                                            resolve(resObj["access_token"]);
+                                            //写入redis
+                                            // Set a value
+                                            rdsClient.set('wxact', resObj["access_token"], rdsClient.print);
+                                            // Expire in 3 seconds
+                                            rdsClient.expire('wxact', resObj["expires_in"]);
+                                        }
                                     });
                                     // resolve(res);
-                                    res.on('error', function(err){
+                                    res.on('error', function (err) {
                                         util.log('RESPONSE ERROR: ' + err);
                                         reject(err);
                                     });
 
                                 });
-                                req.on('error', function(err){
+                                req.on('error', function (err) {
                                     util.log('REQUEST ERROR: ' + err);
                                     reject(err);
                                 });

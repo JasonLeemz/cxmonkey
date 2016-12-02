@@ -38,7 +38,13 @@ var wxXml = {
         console.log("send:" + matchObj["content"]);
         // console.log(matchObj["content"].indexOf('发'))
         if (matchObj["content"]) {
-            if ((matchObj["content"] === '【收到不支持的消息类型，暂无法显示】')) {
+            if ((matchObj["content"] === '关注')) {
+                return new Promise((resolve, reject) => {
+                    console.log("cb:" + matchObj["cont"]);
+                    cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
+                    resolve(cont);
+                });
+            }else if ((matchObj["content"] === '【收到不支持的消息类型，暂无法显示】')) {
                 return new Promise((resolve, reject) => {
                     matchObj["cont"] = '【你的消息已发送但是对方拒收并对你扔了一个板砖】';
                     console.log("cb:" + matchObj["cont"]);

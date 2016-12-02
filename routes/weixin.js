@@ -30,13 +30,17 @@ router.post('/', function (req, res, next) {
                         // console.log(act);
 
                         //关注自动回复
-                        let msg = wxml.text({
+                        wxml.text({
                             'tousername': req.body.xml.fromusername[0],
                             'fromusername': req.body.xml.tousername[0],
                             'cont': '感谢关注，欢迎调戏！\n博客地址：http://www.cnblogs.com/JasonLeemz/',
+                            'content': '关注',
+                        }).then((result)=> {
+                            // console.log(result);
+                            res.send(result);
+                        }, (err)=> {
+                            res.send(err);
                         });
-                        // util.log(msg);
-                        res.send(msg);
                     });
 
             } else { //取消关注事件

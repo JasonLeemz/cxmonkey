@@ -14,7 +14,8 @@ let sprintf = require("sprintf-js").sprintf,
     fileType = require('file-type'),
     util = require('util'),
     wxcode = require('./wxcode'),
-    mqiniu = require('./mqiniu')
+    mqiniu = require('./mqiniu'),
+    config = require('../config/config')
 
 /* eg:
  sprintf("%2$s %3$s a %1$s", "cracker", "Polly", "wants")
@@ -196,6 +197,11 @@ var wxXml = {
         url += "?" + paramstring;
 
         return new Promise((resolve, reject) => {
+            setTimeout(()=>{
+                reject('微信让我五秒内回答，臣妾做不到啊！');
+            }, config.httpTimeOut);
+
+
             if (matchObj['content'].length >= 60) {
                 resolve("你太罗嗦了，少发几个字我可以看得懂！！！");
             }

@@ -7,18 +7,21 @@ let express = require('express'),
     actoken = require('../tools/token'),
     wxml = require('../tools/wxml'),
 
-    util = require('util')
+    util = require('util'),
+    dateFormat = require('dateformat')
 
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
-    console.log("GET:" + req.hostname);
-    console.log(req.body);
+    // console.log("GET:" + req.hostname);
+    // console.log(req.body);
     res.send(req.query.echostr);
 });
 
 router.post('/', function (req, res, next) {
-    util.log(req.body);
+    // util.log(req.body);
+    // let date = new Date();
+    console.log(dateFormat(new Date(), "yyyy-mm-dd H:MM:ss"));
     switch (req.body.xml.msgtype[0]) {
         case 'event':
             if (req.body.xml.event[0] === 'subscribe') { //关注事件
@@ -47,8 +50,10 @@ router.post('/', function (req, res, next) {
                 'content': req.body.xml.content[0],
                 'msgid': req.body.xml.msgid[0],
             }).then((result)=> {
-                console.log(result);
+                // console.log(result);
                 res.send(result);
+            }, (err)=> {
+                res.send(err);
             });
 
             break;
@@ -60,7 +65,7 @@ router.post('/', function (req, res, next) {
                 'msgid': req.body.xml.msgid[0],
                 'mediaid': req.body.xml.mediaid[0],
             }).then((result)=> {
-                console.log(result);
+                // console.log(result);
                 res.send(result);
             });
 
@@ -75,11 +80,27 @@ router.post('/', function (req, res, next) {
                 'label': req.body.xml.label[0],
                 'msgid': req.body.xml.msgid[0],
             }).then((result)=> {
-                console.log(result);
+                // console.log(result);
                 res.send(result);
             });
 
             break;
+        case 'voice':
+            wxml.voice({
+                'tousername': req.body.xml.fromusername[0],
+                'fromusername': req.body.xml.tousername[0],
+                'format': req.body.xml.format[0],
+                'recognition': req.body.xml.recognition[0],
+                'msgid': req.body.xml.msgid[0],
+                'mediaid': req.body.xml.mediaid[0],
+            }).then((result)=> {
+                // console.log(result);
+                res.send(result);
+            });
+
+            break;
+        default:
+            res.send();
     }
 
 

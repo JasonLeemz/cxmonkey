@@ -1,0 +1,1 @@
+nohup /usr/local/bin/node /home/www/cxmonkey/bin/www app.js >> /home/www/cxmonkey/nodeoutput.log 2>&1 &

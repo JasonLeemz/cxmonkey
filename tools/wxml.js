@@ -1,7 +1,7 @@
 /**
  * Created by jason on 2016/11/21.
  */
-var sprintf = require("sprintf-js").sprintf,
+let sprintf = require("sprintf-js").sprintf,
     vsprintf = require("sprintf-js").vsprintf,
     mcurl = require("./mcurl"),
     crc32 = require('crc-32'),
@@ -9,10 +9,12 @@ var sprintf = require("sprintf-js").sprintf,
     rdsClient = require('./mredis'),
     token = require('./token'),
     fs = require('fs'),
+    readLastLines = require('read-last-lines'),
     readChunk = require('read-chunk'),
     fileType = require('file-type'),
     util = require('util'),
-    wxcode = require('./wxcode')
+    wxcode = require('./wxcode'),
+    mqiniu = require('./mqiniu')
 
 /* eg:
  sprintf("%2$s %3$s a %1$s", "cracker", "Polly", "wants")
@@ -20,7 +22,7 @@ var sprintf = require("sprintf-js").sprintf,
  */
 
 var wxXml = {
-    text: function (matchObj) {
+    text: (matchObj)=> {
         let cont = `
                     <xml>
                     <ToUserName><![CDATA[%s]]></ToUserName>
@@ -32,25 +34,48 @@ var wxXml = {
         `;
         let createTime = parseInt(new Date().getTime() / 1000);
 
+        console.log("send:" + matchObj["content"]);
+        // console.log(matchObj["content"].indexOf('发'))
         if (matchObj["content"]) {
             if ((matchObj["content"] === '【收到不支持的消息类型，暂无法显示】')) {
                 return new Promise((resolve, reject) => {
                     matchObj["cont"] = '【你的消息已发送但是对方拒收并对你扔了一个板砖】';
+                    console.log("cb:" + matchObj["cont"]);
                     cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
                     resolve(cont);
                 });
-            } else if (matchObj["content"].indexOf('发') !== false && matchObj["content"].indexOf('图片') !== false) {
+            }
+            // else if (matchObj["content"].indexOf('发') !== -1 && matchObj["content"].indexOf('图片') !== -1) {
+            //     return new Promise((resolve, reject) => {
+            //         wxApi.getImgList().then((list)=>{
+            //             console.log(list)
+            //             resolve(list);
+            //         });
+            //     });
+            // }
+            else if (matchObj["recognition"] && matchObj["content"] === 'ps') {
                 return new Promise((resolve, reject) => {
-                    wxApi.getImgList().then((list)=>{
-                        console.log(list)
-                        resolve(list);
-                    });
+                    matchObj["cont"] = "我真的已经努力去听了，可是你的声音跟屎一样难以辨认！！！！";
+                    console.log("cb:" + matchObj["cont"]);
+                    cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
+                    resolve(cont);
                 });
-            }else if (wxemoji.obj.hasOwnProperty(matchObj["content"])) {
+            } else if (wxemoji.obj.hasOwnProperty(matchObj["content"])) {
                 return new Promise((resolve, reject) => {
                     matchObj["cont"] = wxemoji.array[parseInt(Math.random(wxemoji.array.length - 1) * 10)];
+                    console.log("cb:" + matchObj["cont"]);
                     cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
                     resolve(cont);
+                });
+            } else if (matchObj["content"] === 'nohuplog') {
+                return new Promise((resolve, reject) => {
+                    let filename = "./nodeoutput.log";
+                    readLastLines.read(filename, 20)
+                        .then((lines) => {
+                            matchObj["cont"] = lines.toString('utf-8');
+                            cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
+                            resolve(cont);
+                        });
                 });
             } else {
                 try {
@@ -73,8 +98,12 @@ var wxXml = {
 
                                     // console.log(matchObj)
                                     wxXml.robot(matchObj).then((res)=> {
+                                        console.log("cb:" + res);
                                         cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, res]);
                                         resolve(cont);
+                                    }).catch((e)=>{
+                                        cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, e]);
+                                        reject(cont);
                                     });
                                 });
                             }
@@ -89,13 +118,14 @@ var wxXml = {
         } else {
             return new Promise((resolve, reject) => {
                 matchObj["cont"] = '完全不晓得你在讲啥！';
+                console.log("cb:" + matchObj["cont"]);
                 cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
                 resolve(cont);
             });
 
         }
     },
-    image: function (matchObj) {
+    image: (matchObj)=> {
         // let cont = `
         //             <xml>
         //             <ToUserName><![CDATA[%s]]></ToUserName>
@@ -121,15 +151,19 @@ var wxXml = {
         return new Promise((resolve, reject) => {
             // matchObj["mediaid"] = matchObj["mediaid"] || '你的图片很有趣，我留下了';
             matchObj["mediaid"] = '你的图片很有趣，我留下了';
+            console.log("cb:" + matchObj["mediaid"]);
             mcurl.getImage(matchObj["picurl"]).then((img)=> {
                 var buffer = new Buffer(img, "binary");
                 let ft = fileType(buffer);
                 // let ft = fileType(new Uint8Array(buffer));
-                fs.writeFile("./public/images/" + matchObj['msgid'] + "." + ft.ext, img, 'binary', function (err) {
+                let fileName = "wx_" + matchObj['msgid'] + "." + ft.ext;
+                let saveLocalName = "./public/images/" + fileName;
+                fs.writeFile(saveLocalName, img, 'binary', function (err) {
                     if (err) {
                         console.log(err);
                     } else {
-                        console.log("down success");
+                        mqiniu.uploadFile('wxreceive', fileName, saveLocalName);
+                        console.log("send:" + matchObj["picurl"]);
                     }
                 });
             })
@@ -138,7 +172,7 @@ var wxXml = {
             resolve(cont);
         });
     },
-    robot: function (matchObj) {
+    robot: (matchObj)=> {
 
         //聚合数据
         //配置您申请的appkey
@@ -182,7 +216,7 @@ var wxXml = {
             });
         });
     },
-    location: function (matchObj) {
+    location: (matchObj)=> {
         return new Promise((resolve, reject) => {
             rdsClient.select(1, (error)=> {
                 if (error) {
@@ -208,15 +242,26 @@ var wxXml = {
             let createTime = parseInt(new Date().getTime() / 1000);
 
             matchObj["cont"] = '您的位置我记住了，以后我都会按照这个地址为您查询信息。如果想更换位置，再发给我一遍位置信息就可以了😃';
+            console.log("cb:" + matchObj["cont"] + matchObj['label']);
             cont = vsprintf(cont, [matchObj['tousername'], matchObj["fromusername"], createTime, matchObj["cont"]]);
             resolve(cont);
+        });
+
+    },
+    voice: (matchObj)=> {
+        matchObj["content"] = matchObj["recognition"];
+        return new Promise((resolve, reject) => {
+            wxXml.text(matchObj).then((result)=> {
+                console.log("send:" + matchObj["content"]);
+                resolve(result);
+            });
         });
 
     }
 };
 
 let wxApi = {
-    recursion:0,
+    recursion: 0,
     getImgList: () => {
         return new Promise((resolve, reject)=> {
             token.getWxACT().then((act)=> {
@@ -225,21 +270,20 @@ let wxApi = {
                 mcurl.getContent(url).then((result)=> {
                     // console.log(JSON.parse(result).errcode);
                     let resObj = JSON.parse(result);
-                    if(resObj.errcode == 0){
+                    if (resObj.errcode == 0) {
                         resolve(result);
-                    }else if(wxApi.recursion < 1){
+                    } else if (wxApi.recursion < 1) {
                         console.log(wxcode[resObj["errcode"]]);
                         wxApi.recursion++;
-                        rdsClient.select(1,(error)=>{
-                            if(error) {
-                                console.log('wxact',error);
+                        rdsClient.select(1, (error)=> {
+                            if (error) {
+                                console.log('wxact', error);
                             } else {
                                 rdsClient.del('wxact');
                                 wxApi.getImgList();
                             }
                         });
-                    }else{
-
+                    } else {
                         console.log("被玩坏了");
                     }
                 });

@@ -76,8 +76,9 @@ let token = {
                                 var req = https.request(options, function (res) {
                                     res.setEncoding('utf8');
                                     res.on('data', function (chunk) {
+                                        console.log("resObj:"+chunk.toString("utf-8"));
                                         let resObj = JSON.parse(chunk.toString("utf-8"));
-                                        if(resObj["errcode"] != 0){
+                                        if(resObj["errcode"] && resObj["errcode"] != 0){
                                             console.log(wxcode[resObj["errcode"]]);
                                             resolve(wxcode[resObj["errcode"]]);
                                         }else{

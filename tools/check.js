@@ -1,7 +1,8 @@
 /**
  * Created by jason on 2016/11/9.
  */
-let crypto = require('crypto');
+let crypto = require('crypto'),
+    config = require('../config/config')
 
 function sha1(str) {
     var md5sum = crypto.createHash('sha1');
@@ -12,7 +13,7 @@ function sha1(str) {
 
 let check = {
     weixin: function (s, t, n) {
-        let token = 'cxmonkey2015_limingze';
+        let token = config.wxToken;
 
         let signature = s;
         let timestamp = t;

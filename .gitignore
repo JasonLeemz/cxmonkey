@@ -1,2 +1,5 @@
 node_modules
 public/images/*
+config/*
+monitor.log
+nodeoutput.log
